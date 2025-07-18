@@ -1,0 +1,23 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/task_model.dart';
+
+class SharedPrefsService {
+  static const String taskKey = 'tasks';
+
+  Future<void> saveTasks(List<Task> tasks) async {
+    final prefs = await SharedPreferences.getInstance();
+    final taskJsonList = tasks.map((task) => jsonEncode(task.toJson())).toList();
+    await prefs.setStringList(taskKey, taskJsonList);
+  }
+
+  Future<List<Task>> loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final taskJsonList = prefs.getStringList(taskKey);
+    if (taskJsonList == null) return [];
+
+    return taskJsonList
+        .map((jsonTask) => Task.fromJson(jsonDecode(jsonTask)))
+        .toList();
+  }
+}
