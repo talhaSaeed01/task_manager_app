@@ -1,4 +1,3 @@
-// lib/view/widgets/custom_dropdown.dart
 import 'package:flutter/material.dart';
 
 class CustomDropdown<T> extends StatelessWidget {

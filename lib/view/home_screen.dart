@@ -5,6 +5,7 @@ import 'package:task_manager_app/utils/app_text.dart';
 import 'package:task_manager_app/view/add_edit_task_screen.dart';
 import 'package:task_manager_app/view/widgets/custom_button.dart';
 import 'package:task_manager_app/view/widgets/custom_dropdown.dart';
+import 'package:task_manager_app/view/widgets/shimmer_task_tile.dart';
 import 'package:task_manager_app/view/widgets/task_tile.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,21 +26,26 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final taskController = Provider.of<TaskController>(context);
 
+    final now = DateTime.now();
+
     final filteredTasks = taskController.tasks.where((task) {
-      final matchPriority = taskController.selectedPriority == 'All' ||
-          task.priority == taskController.selectedPriority;
+  final matchPriority =
+      taskController.selectedPriority.toLowerCase() == 'all' ||
+      task.priority.toLowerCase() == taskController.selectedPriority.toLowerCase();
 
-      final matchCompletion = taskController.selectedCompletion == 'All' ||
-          (taskController.selectedCompletion == 'Completed' &&
-              task.isCompleted) ||
-          (taskController.selectedCompletion == 'Pending' &&
-              !task.isCompleted);
+  final matchCompletion = taskController.selectedCompletion == 'All' ||
+      (taskController.selectedCompletion == 'Completed' && task.isCompleted) ||
+      (taskController.selectedCompletion == 'Pending' &&
+          !task.isCompleted && task.dueDate.isBefore(now)) ||
+      (taskController.selectedCompletion == 'Upcoming' &&
+          !task.isCompleted && task.dueDate.isAfter(now));
 
-      final matchDate = selectedDate == null ||
-          isSameDate(task.dueDate, selectedDate!);
+  final matchDate =
+      selectedDate == null || isSameDate(task.dueDate, selectedDate!);
 
-      return matchPriority && matchCompletion && matchDate;
-    }).toList();
+  return matchPriority && matchCompletion && matchDate;
+}).toList();
+
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +110,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       CustomDropdown<String>(
                         label: AppText.status,
                         value: taskController.selectedCompletion,
-                        items: const ['All', 'Completed', 'Pending'],
+                        items: const [
+                          'All',
+                          'Completed',
+                          'Pending',
+                          'Upcoming'
+                        ],
                         onChanged: (value) {
                           if (value != null) {
                             taskController.applyCompletionFilter(value);
@@ -167,14 +178,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: filteredTasks.isEmpty
-                    ? const Center(child: Text(AppText.noTasks))
-                    : ListView.builder(
+                child: taskController.isLoading
+                    ? ListView.builder(
                         padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: filteredTasks.length,
+                        itemCount: 6,
                         itemBuilder: (context, index) =>
-                            TaskTile(task: filteredTasks[index]),
-                      ),
+                            const ShimmerTaskTile(),
+                      )
+                    : filteredTasks.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.inbox_outlined,
+                                  size: 64,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  AppText.noTasks,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            itemCount: filteredTasks.length,
+                            itemBuilder: (context, index) =>
+                                TaskTile(task: filteredTasks[index]),
+                          ),
               ),
             ],
           ),

@@ -1,11 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_manager_app/model/task_model.dart';
 import 'package:task_manager_app/view/widgets/custom_button.dart';
 import 'package:task_manager_app/view/widgets/custom_dropdown.dart';
 import 'package:task_manager_app/view/widgets/custom_textfield.dart';
-import 'package:uuid/uuid.dart';
 import '../controller/task_controller.dart';
 import '../utils/priority_enum.dart' as custom;
 import '../utils/app_text.dart';
@@ -24,6 +22,7 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   late custom.Priority _selectedPriority;
+  DateTime _selectedDate = DateTime.now();
   bool _isDropdownOpen = false;
 
   @override
@@ -36,50 +35,39 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
         (p) => p.name == widget.taskToEdit!.priority,
         orElse: () => custom.Priority.low,
       );
+      _selectedDate = widget.taskToEdit!.dueDate;
     } else {
       _selectedPriority = custom.Priority.low;
+    }
+  }
+
+  Future<void> _pickDueDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() => _selectedDate = pickedDate);
     }
   }
 
   void _handleSubmit() {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
+    final taskController = Provider.of<TaskController>(context, listen: false);
 
-    if (title.isNotEmpty) {
-      final isEditing = widget.taskToEdit != null;
-
-      final task = TaskModel(
-        id: widget.taskToEdit?.id ?? const Uuid().v4(),
-        title: title,
-        description: desc,
-        dueDate: DateTime.now(),
-        isCompleted: widget.taskToEdit?.isCompleted ?? false,
-        priority: _selectedPriority.name,
-      );
-
-      final taskController =
-          Provider.of<TaskController>(context, listen: false);
-      taskController.submitTask(task: task, isEditing: isEditing);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEditing
-              ? AppText.taskUpdatedMessage
-              : AppText.taskAddedMessage),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
-
-      Future.delayed(const Duration(milliseconds: 300), () {
-        Navigator.pop(context);
-      });
-    }
+    taskController.handleTaskSubmission(
+      context: context,
+      title: title,
+      description: desc,
+      dueDate: _selectedDate,
+      priority: _selectedPriority.name,
+      id: widget.taskToEdit?.id,
+      isCompleted: widget.taskToEdit?.isCompleted ?? false,
+    );
   }
 
   @override
@@ -126,7 +114,6 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
               const Text(
                 AppText.taskDetails,
@@ -163,22 +150,46 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
                       maxLines: 6,
                     ),
                     const SizedBox(height: 16),
+                    const Text("Due Date",
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: _pickDueDate,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat.yMMMMd().format(_selectedDate),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const Icon(Icons.calendar_today_outlined,
+                                size: 20, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const Text(AppText.priority,
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 6),
-
-                    // Custom Dropdown
                     CustomDropdown<custom.Priority>(
                       label: AppText.priority,
                       value: _selectedPriority,
                       items: custom.Priority.values,
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           setState(() => _selectedPriority = val);
+                        }
                       },
                       itemLabelBuilder: (priority) => priority.label,
                     ),
-
                     if (_isDropdownOpen)
                       Container(
                         margin: const EdgeInsets.only(top: 6),
@@ -190,10 +201,9 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            )
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2))
                           ],
                         ),
                         child: Column(
@@ -234,9 +244,8 @@ class _AddOrEditTaskScreenState extends State<AddOrEditTaskScreen> {
           border: Border(top: BorderSide(color: Colors.grey.shade300)),
         ),
         child: CustomButton(
-          label: isEditing ? AppText.saveTask : AppText.addTask,
-          onPressed: _handleSubmit,
-        ),
+            label: isEditing ? AppText.saveTask : AppText.addTask,
+            onPressed: _handleSubmit),
       ),
     );
   }
