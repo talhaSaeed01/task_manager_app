@@ -161,6 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: const Text(AppText.clearFilters),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.red,
+                             overlayColor: Colors.transparent,
                           ),
                         ),
                       ),

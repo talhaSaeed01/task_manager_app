@@ -1,5 +1,3 @@
-// splash_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:task_manager_app/view/home_screen.dart';
 
@@ -43,6 +41,7 @@ class SplashProvider extends ChangeNotifier {
       blinkController.stop();
 
       Navigator.pushReplacement(
+        // ignore: use_build_context_synchronously
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
